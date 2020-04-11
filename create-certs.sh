@@ -10,7 +10,7 @@ mkdir -p tmp
 echo " OK!"
 # Generate CA key
 printf "Creating CA..."
-openssl req -new -x509 -keyout tmp/datahub-ca.key -out tmp/datahub-ca.crt -days 365 -subj '/CN=ca.datahub/OU=test/O=datahub/L=paris/C=fr' -passin pass:datahub -passout pass:datahub >/dev/null 2>&1
+openssl req -new -x509 -keyout tmp/ca.confluent.io.key -out tmp/ca.confluent.io.crt -days 7300 -subj '/C=US/ST=CA/L=Mountain View/O=Confluent\, Inc./OU=Information Technology/CN=ca.confluent.io' -passin pass:cnf123 -passout pass:cnf123 >/dev/null 2>&1
 
 echo " OK!"
 
@@ -20,33 +20,33 @@ do
 	# Create keystores
 	keytool -genkey -noprompt \
 				 -alias $i \
-				 -dname "CN=$i, OU=test, O=datahub, L=paris, C=fr" \
+				 -dname "CN=$i, OU=Information Technology, O=Confluent\, Inc., L=Mountain View, C=US, ST=CA" \
 				 -keystore secrets/$i.keystore.jks \
 				 -keyalg RSA \
-				 -storepass datahub \
-				 -keypass datahub  >/dev/null 2>&1
+				 -storepass cnf123 \
+				 -keypass cnf123 >/dev/null 2>&1
 
 	# Create CSR, sign the key and import back into keystore
-	keytool -keystore secrets/$i.keystore.jks -alias $i -certreq -file tmp/$i.csr -storepass datahub -keypass datahub >/dev/null 2>&1
+	keytool -keystore secrets/$i.keystore.jks -alias $i -certreq -file tmp/$i.csr -storepass cnf123 -keypass cnf123 >/dev/null 2>&1
 
-	openssl x509 -req -CA tmp/datahub-ca.crt -CAkey tmp/datahub-ca.key -in tmp/$i.csr -out tmp/$i-ca-signed.crt -days 365 -CAcreateserial -passin pass:datahub  >/dev/null 2>&1
+	openssl x509 -req -CA tmp/ca.confluent.io.crt -CAkey tmp/ca.confluent.io.key -in tmp/$i.csr -out tmp/$i-ca-signed.crt -days 7300 -CAcreateserial -passin pass:cnf123  >/dev/null 2>&1
 
-	keytool -keystore secrets/$i.keystore.jks -alias CARoot -import -noprompt -file tmp/datahub-ca.crt -storepass datahub -keypass datahub >/dev/null 2>&1
+	keytool -keystore secrets/$i.keystore.jks -alias CARoot -import -noprompt -file tmp/ca.confluent.io.crt -storepass cnf123 -keypass cnf123 >/dev/null 2>&1
 
-	keytool -keystore secrets/$i.keystore.jks -alias $i -import -file tmp/$i-ca-signed.crt -storepass datahub -keypass datahub >/dev/null 2>&1
+	keytool -keystore secrets/$i.keystore.jks -alias $i -import -file tmp/$i-ca-signed.crt -storepass cnf123 -keypass cnf123 >/dev/null 2>&1
 
 	# Convert keystore to pkscs12
-	keytool -srcstorepass datahub -importkeystore -srckeystore secrets/$i.keystore.jks -destkeystore secrets/$i.keystore.jks -deststoretype pkcs12 -deststorepass datahub  2>&1
+	keytool -srcstorepass cnf123 -importkeystore -srckeystore secrets/$i.keystore.jks -destkeystore secrets/$i.keystore.jks -deststoretype pkcs12 -deststorepass cnf123  2>&1
 
 	# Create truststore and import the CA cert.
-	keytool -keystore secrets/$i.truststore.jks -alias CARoot -import -noprompt -file tmp/datahub-ca.crt -storepass datahub -keypass datahub >/dev/null 2>&1
+	keytool -keystore secrets/$i.truststore.jks -alias CARoot -import -noprompt -file tmp/ca.confluent.io.crt -storepass cnf123 -keypass cnf123 >/dev/null 2>&1
 
 	# Convert truststore to pkscs12
-	keytool -srcstorepass datahub -importkeystore -srckeystore secrets/$i.truststore.jks -destkeystore secrets/$i.truststore.jks -deststoretype pkcs12 -deststorepass datahub  2>&1
+	keytool -srcstorepass cnf123 -importkeystore -srckeystore secrets/$i.truststore.jks -destkeystore secrets/$i.truststore.jks -deststoretype pkcs12 -deststorepass cnf123  2>&1
   echo " OK!"
 done
 
-echo "datahub" > secrets/cert_creds
+echo "cnf123" > secrets/cert_creds
 #rm -rf tmp
 
 echo "SUCCEEDED"
